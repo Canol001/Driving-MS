@@ -132,3 +132,30 @@ exports.sendMessage = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+exports.getOverview = async (req, res) => {
+  try {
+    const instructorId = req.user._id;
+
+    const bookings = await Booking.find({ instructor: instructorId })
+      .populate('student', 'name')
+      .sort({ date: 1 });
+
+    const assignedStudents = new Set(bookings.map(b => b.student?._id.toString())).size;
+    const completedLessons = bookings.filter(b => b.status === 'completed').length;
+    const upcomingLessons = bookings.filter(b => b.status !== 'completed').length;
+    const nextLesson = bookings[0]
+      ? `${bookings[0].date.toDateString()} at ${bookings[0].time}`
+      : 'None';
+
+    res.json({
+      assignedStudents,
+      completedLessons,
+      upcomingLessons,
+      nextLesson,
+    });
+  } catch (error) {
+    console.error('Error in getOverview:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};

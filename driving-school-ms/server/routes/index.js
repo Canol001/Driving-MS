@@ -45,4 +45,6 @@ router.post('/instructor/report', auth(['instructor']), instructorController.rep
 router.put('/instructor/availability', auth(['instructor']), instructorController.updateAvailability);
 router.get('/instructor/notifications', auth(['instructor']), instructorController.getNotifications);
 router.get('/instructor/student/:studentId', auth(['instructor']), instructorController.getStudentProfile);
-router.post('/instructor/m
+router.post('/instructor/message', auth(['instructor']), instructorController.sendMessage);
+
+module.exports = router;
