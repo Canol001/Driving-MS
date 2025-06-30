@@ -500,9 +500,10 @@ const AdminDashboard = () => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {bookings.map(b => (
                   <tr key={b._id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{b.course.title}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{b.student.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{b.instructor.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{b.course?.title || 'N/A'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{b.student?.name || 'N/A'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{b.instructor?.name || 'Unassigned'}</td>
+
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(b.date).toLocaleString()}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm capitalize">
                       <span className={b.status === 'confirmed' ? 'text-emerald-600' : b.status === 'cancelled' ? 'text-red-600' : 'text-amber-600'}>{b.status}</span>
@@ -555,7 +556,8 @@ const AdminDashboard = () => {
                       {u.availability?.map(a => `${a.day}: ${a.time}`).join(', ') || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {bookings.filter(b => b.instructor._id === u._id).length}
+                    {bookings.filter(b => b?.instructor?._id === u._id).length}
+
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button onClick={() => openModal('editUser', u)} className="text-indigo-600 hover:text-indigo-900 mr-4">
@@ -618,7 +620,7 @@ const AdminDashboard = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {Array.isArray(c.categories) && c.categories.length > 0
                         ? c.categories.join(', ')
-                        : <span className="italic text-gray-400">Uncategorized</span>}
+                        : <span className="italic text-gray-400">||===|===||</span>}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button onClick={() => openModal('editCourse', c)} className="text-indigo-600 hover:text-indigo-900 mr-4">
