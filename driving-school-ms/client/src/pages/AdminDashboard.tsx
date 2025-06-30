@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import React, { useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { cancelBooking, createBooking, createCourse, deleteCourse, deleteUser, getAnalytics, getBookings, getCourses, getPayments, getUsers, processPayment, refundPayment, registerUser, updateBooking, updateCourse, updateUser } from '../api';
+import { deleteBooking, createBooking, createCourse, deleteCourse, deleteUser, getAnalytics, getBookings, getCourses, getPayments, getUsers, processPayment, refundPayment, registerUser, updateBooking, updateCourse, updateUser } from '../api';
 import { AuthContext } from '../context/AuthContext';
 
 interface User {
@@ -231,16 +231,32 @@ const AdminDashboard = () => {
   
   
 
-  const handleCancelBooking = async (id: string) => {
-    if (window.confirm('Are you sure you want to cancel this lesson?')) {
+  const handleDeleteBooking = async (id: string) => {
+    if (window.confirm('🗑️ Are you sure you want to delete this lesson permanently?')) {
       try {
-        const cancelledBooking = await cancelBooking(id);
-        setBookings(bookings.map(b => (b._id === id ? cancelledBooking : b)));
+        console.log('📤 Sending DELETE request for booking ID:', id);
+        await deleteBooking(id); // 👈 Call your API
+  
+        console.log('✅ Booking deleted. Updating local state...');
+        setBookings(bookings.filter(b => b._id !== id));
       } catch (err: any) {
-        setError(err.response?.data?.message || 'Failed to cancel booking.');
+        console.error('❌ Error deleting booking:', err); // Log full error object
+  
+        // Optional: log response details if available
+        if (err.response) {
+          console.error('🔎 Error response data:', err.response.data);
+          console.error('📟 Status code:', err.response.status);
+          console.error('📡 Headers:', err.response.headers);
+        }
+  
+        setError(err.response?.data?.message || '❌ Failed to delete booking.');
       }
     }
   };
+  
+
+  
+  
 
   const handleCourseSubmit = async () => {
     try {
@@ -543,7 +559,7 @@ const AdminDashboard = () => {
                       <button onClick={() => openModal('editBooking', b)} className="text-indigo-600 hover:text-indigo-900 mr-4">
                         <Edit className="h-4 w-4" />
                       </button>
-                      <button onClick={() => handleCancelBooking(b._id)} className="text-red-600 hover:text-red-900">
+                      <button onClick={() => handleDeleteBooking(b._id)} className="text-red-600 hover:text-red-900">
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </td>

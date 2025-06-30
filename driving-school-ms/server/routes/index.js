@@ -36,7 +36,8 @@ router.get('/instructor/overview', auth(['instructor']), instructorController.ge
 router.get('/bookings', auth(['student', 'instructor', 'admin']), bookingController.getBookings);
 router.post('/bookings', auth(['student', 'admin']), bookingController.createBooking);
 router.put('/bookings/:id', auth(['student', 'instructor', 'admin']), bookingController.updateBooking);
-router.delete('/bookings/:id', auth(['admin']), bookingController.deleteBooking);
+router.delete('/bookings/:id', auth(['student', 'instructor', 'admin']), bookingController.deleteBooking);
+
 
 /* ────────────── INSTRUCTOR ROUTES ────────────── */
 router.get('/instructor/schedule', auth(['instructor']), instructorController.getSchedule);
@@ -46,6 +47,7 @@ router.put('/instructor/availability', auth(['instructor']), instructorControlle
 router.get('/instructor/notifications', auth(['instructor']), instructorController.getNotifications);
 router.get('/instructor/student/:studentId', auth(['instructor']), instructorController.getStudentProfile);
 router.post('/instructor/message', auth(['instructor']), instructorController.sendMessage);
+
 
 /* ────────────── DEBUG ROUTE ────────────── */
 router.get('/bookings-debug', async (req, res) => {
@@ -60,5 +62,7 @@ router.get('/bookings-debug', async (req, res) => {
     res.status(500).json({ message: 'Server error in debug route' });
   }
 });
+
+
 
 module.exports = router;

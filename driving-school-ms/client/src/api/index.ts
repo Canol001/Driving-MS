@@ -211,3 +211,8 @@ export const sendMessage = async (data: {
   recipientId: string;
   message: string;
 }): Promise<{ message: string }> => await api.post('/instructor/message', data);
+
+export const deleteBooking = async (id: string) => {
+  return (await api.delete(`/bookings/${id}`)).data;
+};
+

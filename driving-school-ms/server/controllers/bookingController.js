@@ -99,26 +99,19 @@ const updateBooking = async (req, res) => {
 // 🗑️ DELETE A BOOKING
 // ============================
 const deleteBooking = async (req, res) => {
-  try {
-    const { id } = req.params;
+  const { id } = req.params;
 
-    console.log('🗑️ Deleting booking:', id);
+  console.log('🗑️ Deleting booking:', id);
 
-    const booking = await Booking.findByIdAndDelete(id);
+  const booking = await Booking.findByIdAndDelete(id);
 
-    if (!booking) {
-      console.warn('⚠️ Booking not found for deletion:', id);
-      return res.status(404).json({ message: 'Booking not found' });
-    }
-
-    console.log('✅ Booking deleted:', id);
-    res.status(200).json({ message: 'Booking deleted successfully' });
-
-  } catch (error) {
-    console.error('❌ deleteBooking Error:', error.stack);
-    res.status(500).json({ message: 'Failed to delete booking' });
+  if (!booking) {
+    return res.status(404).json({ message: 'Booking not found' });
   }
+
+  res.status(200).json({ message: 'Booking deleted successfully' });
 };
+
 
 // ============================
 // ✅ EXPORT FUNCTIONS
