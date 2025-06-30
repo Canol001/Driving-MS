@@ -5,7 +5,7 @@ const router = express.Router();
 const auth = require('../middlewares/authMiddleware');
 
 // Route modules (modularized)
-const userRoutes = require('./userRoutes'); // 👈 import the user routes
+const userRoutes = require('./userRoutes');
 const paymentRoutes = require('./paymentRoutes');
 const analyticsRoutes = require('./analyticsRoutes');
 
@@ -13,6 +13,7 @@ const analyticsRoutes = require('./analyticsRoutes');
 const courseController = require('../controllers/courseController');
 const bookingController = require('../controllers/bookingController');
 const instructorController = require('../controllers/instructorController');
+const Booking = require('../models/Booking'); // 👈 Needed for debug route
 
 // Debug log to make sure controllers are loaded correctly
 console.log('Loaded courseController:', Object.keys(courseController));
@@ -20,8 +21,7 @@ console.log('Loaded bookingController:', Object.keys(bookingController));
 console.log('Loaded instructorController:', Object.keys(instructorController));
 
 // Mount /users from userRoutes
-router.use('/users', userRoutes); // ✅ now /api/users will work
-// Mount routes
+router.use('/users', userRoutes);
 router.use('/payments', paymentRoutes);
 router.use('/analytics', analyticsRoutes);
 
@@ -46,5 +46,19 @@ router.put('/instructor/availability', auth(['instructor']), instructorControlle
 router.get('/instructor/notifications', auth(['instructor']), instructorController.getNotifications);
 router.get('/instructor/student/:studentId', auth(['instructor']), instructorController.getStudentProfile);
 router.post('/instructor/message', auth(['instructor']), instructorController.sendMessage);
+
+/* ────────────── DEBUG ROUTE ────────────── */
+router.get('/bookings-debug', async (req, res) => {
+  try {
+    const bookings = await Booking.find()
+      .populate('student', 'name email')
+      .populate('instructor', 'name email')
+      .populate('course', 'title');
+    res.json(bookings);
+  } catch (err) {
+    console.error('❌ bookings-debug: Error fetching bookings:', err.message);
+    res.status(500).json({ message: 'Server error in debug route' });
+  }
+});
 
 module.exports = router;

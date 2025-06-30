@@ -187,18 +187,49 @@ const AdminDashboard = () => {
 
   const handleBookingSubmit = async () => {
     try {
+      // Normalize IDs
+      const courseId = typeof formData.course === 'object' ? formData.course._id : formData.course;
+      const instructorId = typeof formData.instructor === 'object' ? formData.instructor._id : formData.instructor;
+      const studentId = typeof formData.student === 'object' ? formData.student._id : formData.student;
+      const date = formData.date;
+  
+      const payload = {
+        course: courseId,
+        instructor: instructorId,
+        student: studentId,
+        date,
+        status: formData.status || 'pending',
+      };
+  
+      // Basic frontend validation
+      if (!payload.student || !payload.course || !payload.instructor || !payload.date) {
+        setError('❗ Please fill in all required fields.');
+        return;
+      }
+  
+      if (new Date(payload.date) < new Date()) {
+        setError('⏳ You cannot book a lesson in the past.');
+        return;
+      }
+  
+      console.log('📝 Submitting booking:', payload);
+  
       if (modalType === 'addBooking') {
-        const newBooking = await createBooking(formData);
+        const newBooking = await createBooking(payload);
         setBookings([...bookings, newBooking]);
       } else if (modalType === 'editBooking' && selectedItem) {
-        const updatedBooking = await updateBooking(selectedItem._id, formData);
+        const updatedBooking = await updateBooking(selectedItem._id, payload);
         setBookings(bookings.map(b => (b._id === selectedItem._id ? updatedBooking : b)));
       }
+  
       closeModal();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to save booking.');
+      console.error('❌ Booking submit error:', err);
+      setError(err.response?.data?.message || '⚠️ Failed to save booking.');
     }
   };
+  
+  
 
   const handleCancelBooking = async (id: string) => {
     if (window.confirm('Are you sure you want to cancel this lesson?')) {
@@ -818,255 +849,228 @@ const AdminDashboard = () => {
     </div>
   );
 
+
+
+
+  const Input = ({ label, name, value, onChange, type = 'text', placeholder = '' }) => (
+    <div>
+      <label className="block text-xs font-medium text-gray-700 mb-1">{label}</label>
+      <input
+        type={type}
+        name={name}
+        value={value || ''}
+        onChange={onChange}
+        className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+        placeholder={placeholder}
+      />
+    </div>
+  );
+  
+  const Select = ({ label, name, value, onChange, options }) => (
+    <div>
+      <label className="block text-xs font-medium text-gray-700 mb-1">{label}</label>
+      <select
+        name={name}
+        value={value}
+        onChange={onChange}
+        className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+      >
+        <option value="">Select {label}</option>
+        {options.map((opt) =>
+          typeof opt === 'string' ? (
+            <option key={opt} value={opt}>{opt}</option>
+          ) : (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          )
+        )}
+      </select>
+    </div>
+  );
+  
+  const Textarea = ({ label, name, value, onChange }) => (
+    <div>
+      <label className="block text-xs font-medium text-gray-700 mb-1">{label}</label>
+      <textarea
+        name={name}
+        value={value || ''}
+        onChange={onChange}
+        className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+      />
+    </div>
+  );
+  
+  const SubmitButton = ({ onClick }) => (
+    <button
+      onClick={onClick}
+      className="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 text-sm"
+    >
+      Save
+    </button>
+  );
+  
+
+
+
+
+
   const renderModal = () => {
     if (!modalOpen) return null;
+  
+    const isPastDate = (dateStr: string) => {
+      const now = new Date();
+      const input = new Date(dateStr);
+      return input < now;
+    };
+  
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white p-6 rounded-lg w-full max-w-md">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold">
-              {modalType === 'addUser' ? 'Add User' : 
-               modalType === 'editUser' ? 'Edit User' : 
-               modalType === 'addBooking' ? 'Schedule Lesson' : 
-               modalType === 'editBooking' ? 'Edit Lesson' :
-               modalType === 'addCourse' ? 'Add Course' : 'Edit Course'}
+              {{
+                addUser: 'Add User',
+                editUser: 'Edit User',
+                addBooking: 'Schedule Lesson',
+                editBooking: 'Edit Lesson',
+                addCourse: 'Add Course',
+                editCourse: 'Edit Course',
+              }[modalType]}
             </h3>
             <button onClick={closeModal}>
               <X className="h-5 w-5 text-gray-600" />
             </button>
           </div>
+  
+          {/* USER FORM */}
           {modalType === 'addUser' || modalType === 'editUser' ? (
             <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Name</label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name || ''}
-                  onChange={handleFormChange}
-                  className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email || ''}
-                  onChange={handleFormChange}
-                  className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-                />
-              </div>
+              <Input label="Name" name="name" value={formData.name} onChange={handleFormChange} />
+              <Input label="Email" name="email" type="email" value={formData.email} onChange={handleFormChange} />
               {modalType === 'addUser' && (
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Password</label>
-                  <input
-                    type="password"
-                    name="password"
-                    value={formData.password || ''}
-                    onChange={handleFormChange}
-                    className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-                  />
-                </div>
+                <Input label="Password" name="password" type="password" value={formData.password} onChange={handleFormChange} />
               )}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Role</label>
-                <select
-                  name="role"
-                  value={formData.role || 'student'}
-                  onChange={handleFormChange}
-                  className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-                >
-                  <option value="student">Student</option>
-                  <option value="instructor">Instructor</option>
-                  <option value="admin">Admin</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
-                <select
-                  name="status"
-                  value={formData.status || 'Active'}
-                  onChange={handleFormChange}
-                  className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-                >
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
-                </select>
-              </div>
+              <Select label="Role" name="role" value={formData.role || 'student'} onChange={handleFormChange} options={['student', 'instructor', 'admin']} />
+              <Select label="Status" name="status" value={formData.status || 'Active'} onChange={handleFormChange} options={['Active', 'Inactive']} />
               {formData.role === 'instructor' && (
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Availability (e.g., Mon 9AM-12PM)</label>
-                  <input
-                    type="text"
-                    name="availability"
-                    value={formData.availability?.join(', ') || ''}
-                    onChange={e => setFormData({ ...formData, availability: e.target.value.split(', ') })}
-                    className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-                    placeholder="Mon 9AM-12PM, Tue 1PM-4PM"
-                  />
-                </div>
+                <Input
+                  label="Availability (e.g., Mon 9AM-12PM)"
+                  name="availability"
+                  value={formData.availability?.join(', ') || ''}
+                  onChange={(e) =>
+                    setFormData({ ...formData, availability: e.target.value.split(', ') })
+                  }
+                  placeholder="Mon 9AM-12PM, Tue 1PM-4PM"
+                />
               )}
-              <button
-                onClick={handleUserSubmit}
-                className="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 text-sm"
-              >
-                Save
-              </button>
+              <SubmitButton onClick={handleUserSubmit} />
             </div>
+  
           ) : modalType === 'addBooking' || modalType === 'editBooking' ? (
+            // BOOKING FORM
             <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Course</label>
-                <select
-                  name="course"
-                  value={formData.course?._id || ''}
-                  onChange={handleFormChange}
-                  className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-                >
-                  <option value="">Select Course</option>
-                  {courses.map(c => (
-                    <option key={c._id} value={c._id}>{c.title}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Student</label>
-                <select
-                  name="student"
-                  value={formData.student?._id || ''}
-                  onChange={handleFormChange}
-                  className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-                >
-                  <option value="">Select Student</option>
-                  {users.filter(u => u.role === 'student').map(u => (
-                    <option key={u._id} value={u._id}>{u.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Instructor</label>
-                <select
-                  name="instructor"
-                  value={formData.instructor?._id || ''}
-                  onChange={handleFormChange}
-                  className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-                >
-                  <option value="">Select Instructor</option>
-                  {users.filter(u => u.role === 'instructor').map(u => (
-                    <option key={u._id} value={u._id}>{u.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Date & Time</label>
-                <input
-                  type="datetime-local"
-                  name="date"
-                  value={formData.date ? new Date(formData.date).toISOString().slice(0, 16) : ''}
-                  onChange={handleFormChange}
-                  className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
-                <select
-                  name="status"
-                  value={formData.status || 'pending'}
-                  onChange={handleFormChange}
-                  className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-                >
-                  <option value="pending">Pending</option>
-                  <option value="scheduled">Scheduled</option>
-                  <option value="confirmed">Confirmed</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
-              </div>
-              <button
-                onClick={handleBookingSubmit}
-                className="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 text-sm"
-              >
-                Save
-              </button>
+              <Select
+                label="Course"
+                name="course"
+                value={formData.course?._id || formData.course || ''}
+                onChange={(e) => setFormData({ ...formData, course: e.target.value })}
+                options={courses.map((c) => ({ value: c._id, label: c.title }))}
+              />
+              <Select
+                label="Student"
+                name="student"
+                value={formData.student || ''}
+                onChange={(e) => setFormData({ ...formData, student: e.target.value })} // ✅ THIS LINE!
+                options={users
+                  .filter((u) => u.role === 'student')
+                  .map((u) => ({ value: u._id, label: u.name }))}
+              />
+              <Select
+                label="Instructor"
+                name="instructor"
+                value={formData.instructor?._id || formData.instructor || ''}
+                onChange={(e) => setFormData({ ...formData, instructor: e.target.value })}
+                options={users.filter(u => u.role === 'instructor').map((u) => ({ value: u._id, label: u.name }))}
+              />
+              <Input
+                label="Date & Time"
+                name="date"
+                type="datetime-local"
+                value={formData.date ? new Date(formData.date).toISOString().slice(0, 16) : ''}
+                onChange={(e) => {
+                  const newDate = e.target.value;
+                  if (isPastDate(newDate)) {
+                    alert('🚫 Cannot select past date or time.');
+                  } else {
+                    handleFormChange(e);
+                  }
+                }}
+              />
+              <Select
+                label="Status"
+                name="status"
+                value={formData.status || 'pending'}
+                onChange={handleFormChange}
+                options={['pending', 'scheduled', 'confirmed', 'cancelled']}
+              />
+              <SubmitButton onClick={handleBookingSubmit} />
             </div>
+  
           ) : (
+            // COURSE FORM
             <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Title</label>
-                <input
-                  type="text"
-                  name="title"
-                  value={formData.title || ''}
-                  onChange={handleFormChange}
-                  className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
-                <textarea
-                  name="description"
-                  value={formData.description || ''}
-                  onChange={handleFormChange}
-                  className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Duration (hours)</label>
-                <input
-                  type="number"
-                  name="duration"
-                  value={formData.duration || ''}
-                  onChange={handleFormChange}
-                  className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Price ($)</label>
-                <input
-                  type="number"
-                  name="price"
-                  value={formData.price || ''}
-                  onChange={handleFormChange}
-                  className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Instructor</label>
-                <select
-                  name="instructor"
-                  value={formData.instructor?._id || ''}
-                  onChange={handleFormChange}
-                  className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-                >
-                  <option value="">Select Instructor</option>
-                  {users.filter(u => u.role === 'instructor').map(u => (
-                    <option key={u._id} value={u._id}>{u.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Categories (comma-separated, e.g., B1 small cars, manual)</label>
-                <input
-                  type="text"
-                  name="categories"
-                  value={formData.categories || ''}
-                  onChange={handleFormChange}
-                  className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-                  placeholder="B1 small cars, manual, automatic, period"
-                />
-              </div>
-              <button
-                onClick={handleCourseSubmit}
-                className="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 text-sm"
-              >
-                Save
-              </button>
+              <Input label="Title" name="title" value={formData.title} onChange={handleFormChange} />
+              <Textarea label="Description" name="description" value={formData.description} onChange={handleFormChange} />
+              <Input
+                label="Duration (hours)"
+                name="duration"
+                type="number"
+                value={formData.duration}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  if (val < 1) {
+                    alert('🚫 Duration must be at least 1 hour.');
+                  } else {
+                    handleFormChange(e);
+                  }
+                }}
+              />
+              <Input
+                label="Price ($)"
+                name="price"
+                type="number"
+                value={formData.price}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  if (val < 0) {
+                    alert('🚫 Price cannot be negative.');
+                  } else {
+                    handleFormChange(e);
+                  }
+                }}
+              />
+              <Select
+                label="Instructor"
+                name="instructor"
+                value={formData.instructor?._id || formData.instructor || ''}
+                onChange={(e) => setFormData({ ...formData, instructor: e.target.value })}
+                options={users.filter((u) => u.role === 'instructor').map((u) => ({ value: u._id, label: u.name }))}
+              />
+              <Input
+                label="Categories (comma-separated)"
+                name="categories"
+                value={formData.categories || ''}
+                onChange={handleFormChange}
+                placeholder="B1 small cars, manual, automatic"
+              />
+              <SubmitButton onClick={handleCourseSubmit} />
             </div>
           )}
         </div>
       </div>
     );
   };
+  
+  
 
   const renderContent = () => {
     switch (activeSection) {

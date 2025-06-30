@@ -1,84 +1,131 @@
+// 📁 bookingController.js
+
 const Booking = require('../models/Booking');
 
-console.log('bookingController.js: File loaded');
+console.log('📦 Booking Controller loaded');
 
+// ============================
+// 📥 GET ALL BOOKINGS
+// ============================
 const getBookings = async (req, res) => {
   try {
-    console.log('getBookings: Fetching bookings for user:', req.user._id);
-    const query = req.user.role === 'student' ? { student: req.user._id } : 
-                 req.user.role === 'instructor' ? { instructor: req.user._id } : {};
+    const userId = req.user?._id;
+    const userRole = req.user?.role;
+
+    console.log('📡 Fetching bookings for:', { userId, userRole });
+
+    let query = {};
+
+    if (userRole === 'student') {
+      query.student = userId;
+    } else if (userRole === 'instructor') {
+      query.instructor = userId;
+    }
+    // Admin gets all bookings
+
     const bookings = await Booking.find(query)
       .populate('course', 'title')
-      .populate('student', 'name')
-      .populate('instructor', 'name');
-    res.json(bookings);
+      .populate('student', 'name email')
+      .populate('instructor', 'name email');
+
+    console.log(`✅ ${bookings.length} bookings fetched for role: ${userRole}`);
+    res.status(200).json(bookings);
+
   } catch (error) {
-    console.error('getBookings: Error:', error.stack);
-    res.status(500).json({ message: 'Server error' });
+    console.error('❌ getBookings Error:', error.stack);
+    res.status(500).json({ message: 'Failed to fetch bookings' });
   }
 };
 
+// ============================
+// 🆕 CREATE A BOOKING
+// ============================
 const createBooking = async (req, res) => {
   try {
-    const { course, instructor, date } = req.body;
-    console.log('createBooking: Creating booking:', { course, instructor, date });
+    const { course, instructor, student, date, status } = req.body;
+
+    if (!course || !instructor || !student || !date) {
+      return res.status(400).json({ message: 'Missing required fields: course, instructor, student, or date.' });
+    }
+
+    console.log('📝 Creating booking with:', { course, instructor, student, date, status });
+
     const booking = new Booking({
       course,
-      student: req.user._id,
       instructor,
+      student,
       date,
-      status: 'pending'
+      status: status || 'pending'
     });
+
     await booking.save();
-    console.log('createBooking: Booking created:', booking._id);
+
+    console.log('✅ Booking created:', booking._id);
     res.status(201).json(booking);
+
   } catch (error) {
-    console.error('createBooking: Error:', error.stack);
-    res.status(500).json({ message: 'Server error' });
+    console.error('❌ createBooking Error:', error.stack);
+    res.status(500).json({ message: 'Failed to create booking' });
   }
 };
 
+// ============================
+// ♻️ UPDATE A BOOKING
+// ============================
 const updateBooking = async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
-    console.log('updateBooking: Updating booking:', id, updates);
+
+    console.log('🔄 Updating booking:', id, updates);
+
     const booking = await Booking.findByIdAndUpdate(id, updates, { new: true });
+
     if (!booking) {
-      console.log('updateBooking: Booking not found:', id);
+      console.warn('⚠️ Booking not found:', id);
       return res.status(404).json({ message: 'Booking not found' });
     }
-    console.log('updateBooking: Booking updated:', id);
-    res.json(booking);
+
+    console.log('✅ Booking updated:', id);
+    res.status(200).json(booking);
+
   } catch (error) {
-    console.error('updateBooking: Error:', error.stack);
-    res.status(500).json({ message: 'Server error' });
+    console.error('❌ updateBooking Error:', error.stack);
+    res.status(500).json({ message: 'Failed to update booking' });
   }
 };
 
+// ============================
+// 🗑️ DELETE A BOOKING
+// ============================
 const deleteBooking = async (req, res) => {
   try {
     const { id } = req.params;
-    console.log('deleteBooking: Deleting booking:', id);
+
+    console.log('🗑️ Deleting booking:', id);
+
     const booking = await Booking.findByIdAndDelete(id);
+
     if (!booking) {
-      console.log('deleteBooking: Booking not found:', id);
+      console.warn('⚠️ Booking not found for deletion:', id);
       return res.status(404).json({ message: 'Booking not found' });
     }
-    console.log('deleteBooking: Booking deleted:', id);
-    res.json({ message: 'Booking deleted' });
+
+    console.log('✅ Booking deleted:', id);
+    res.status(200).json({ message: 'Booking deleted successfully' });
+
   } catch (error) {
-    console.error('deleteBooking: Error:', error.stack);
-    res.status(500).json({ message: 'Server error' });
+    console.error('❌ deleteBooking Error:', error.stack);
+    res.status(500).json({ message: 'Failed to delete booking' });
   }
 };
 
-const exportedFunctions = {
+// ============================
+// ✅ EXPORT FUNCTIONS
+// ============================
+module.exports = {
   getBookings,
   createBooking,
   updateBooking,
-  deleteBooking
+  deleteBooking,
 };
-
-console.log('bookingController.js: Exporting functions:', Object.keys(exportedFunctions));
-module.exports = exportedFunctions;

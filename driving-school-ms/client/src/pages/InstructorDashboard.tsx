@@ -87,7 +87,7 @@ api.interceptors.request.use((config) => {
 
 const getBookings = async (filters: { startDate?: string; endDate?: string; studentId?: string }) => {
   const params = new URLSearchParams(filters).toString();
-  const response = await api.get(`/bookings?${params}`);
+  const response = await api.get(`/bookings-debug?${params}`);
 
   // 👀 Safety net to detect if HTML was returned (like a frontend dev server response)
   if (typeof response.data === 'string' && response.data.includes('<!DOCTYPE html>')) {
@@ -131,56 +131,77 @@ const InstructorDashboard = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
+        setError(null);
+  
+        // Fetch everything at once
         const [coursesRes, bookingsResRaw, notificationsRes] = await Promise.all([
           getCourses(),
           getBookings(stableFilters),
           getNotifications(),
         ]);
-
-        console.log('User ID:', user?._id);
-        console.log('Role:', user?.role);
-        console.log('Raw Courses:', JSON.stringify(coursesRes, null, 2));
-        console.log('Raw Bookings Response:', JSON.stringify(bookingsResRaw, null, 2));
-        console.log('Notifications:', JSON.stringify(notificationsRes, null, 2));
-
+  
+        console.log('👤 User ID:', user?._id);
+        console.log('🎓 Role:', user?.role);
+        console.log('📚 Raw Courses:', JSON.stringify(coursesRes, null, 2));
+        console.log('📆 Raw Bookings:', JSON.stringify(bookingsResRaw, null, 2));
+        console.log('🔔 Notifications:', JSON.stringify(notificationsRes, null, 2));
+  
         const bookingsRes: Booking[] = Array.isArray(bookingsResRaw) ? bookingsResRaw : [];
-
+  
+        // Fix: Normalize instructor IDs to strings before comparison
         const instructorBookings = bookingsRes.filter((b: Booking) => {
-          if (!b.instructor) {
-            console.warn('Booking missing instructor:', b);
-            return false;
+          const instructorId =
+            typeof b.instructor === 'string'
+              ? b.instructor
+              : b.instructor?._id?.toString();
+  
+          const userId = user?._id?.toString();
+  
+          const match = instructorId === userId;
+  
+          if (!match) {
+            console.warn(
+              `⚠️ Skipped booking — instructorId mismatch: got ${instructorId}, expected ${userId}`
+            );
           }
-          const instructorId = typeof b.instructor === 'string' ? b.instructor : b.instructor._id;
-          console.log(`Comparing booking instructorId: ${instructorId} with user._id: ${user?._id}`);
-          return instructorId === user?._id;
+  
+          return match;
         });
-
-        console.log('Filtered Bookings:', JSON.stringify(instructorBookings, null, 2));
-
+  
+        console.log('✅ Filtered Bookings:', JSON.stringify(instructorBookings, null, 2));
+  
+        // Update states
         setCourses(coursesRes || []);
         setBookings(instructorBookings || []);
         setNotifications(notificationsRes || []);
-
+  
         if (instructorBookings.length === 0) {
-          console.warn('No bookings found for instructor. Check database or backend query.');
-          setError('No bookings found. Check if bookings exist in the database or contact the admin.');
+          console.warn('❌ No bookings found for instructor.');
+          setError('No bookings found for you yet. Check with admin or add bookings first.');
         }
       } catch (err: any) {
-        console.error('API Error:', err);
-        setError(err.response?.data?.message || err.message || 'Failed to load data. Please try again.');
+        console.error('💥 API Error:', err);
+        setError(
+          err?.response?.data?.message ||
+          err.message ||
+          'Something went wrong while loading your dashboard.'
+        );
       } finally {
         setLoading(false);
       }
     };
-
+  
+    // Access control
     if (user?._id && user?.role === 'instructor') {
       fetchData();
     } else {
-      console.error('User ID missing or not an instructor, barato casino to login');
-      setError('User not authenticated or not an instructor. Please log in.');
+      console.error('⛔ Invalid access — user not authenticated or not an instructor.');
+      setError('You are not authorized to access this dashboard. Please log in.');
       navigate('/login');
     }
   }, [user?._id, user?.role, stableFilters, navigate]);
+  
+  
 
   // Derive unique assigned students from bookings
   const assignedStudents: AssignedStudent[] = useMemo(() => {
